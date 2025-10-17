@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  invoiceId   String   @unique
+  supplier    String
+  total       Float
+  status      InvoiceStatus @default(PENDING_VALIDATION)
+  xmlData     String?
+  jsonData    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  divergences Divergence[]
+  manifestations Manifestation[]
+  payments    Payment[]
+
+  @@map("invoices")
+}
+
+model Divergence {
+  id        String   @id @default(cuid())
+  invoiceId String
+  type      String
+  message   String
+  status    DivergenceStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("divergences")
+}
+
+model Manifestation {
+  id        String   @id @default(cuid())
+  invoiceId String
+  type      ManifestationType
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("manifestations")
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  invoiceId String
+  amount    Float
+  status    PaymentStatus @default(PENDING)
+  dueDate   DateTime
+  paidAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
+}
+
+enum InvoiceStatus {
+  PENDING_VALIDATION
+  VALIDATED
+  PROCESSED
+  ERROR
+}
+
+enum DivergenceStatus {
+  PENDING
+  RESOLVED
+  IGNORED
+}
+
+enum ManifestationType {
+  CONFIRM_OPERATION
+  DENY_OPERATION
+  AWARE_OPERATION
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
